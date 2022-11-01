@@ -1,7 +1,7 @@
 # distributed-locking
 Distributed lock implementation in Golang
 
-To test out, a dummy queue was created with 4 messages in it. 3 consumers (client) were run as a go routine, and they were synchronized by locking using redis. 
+To test out, a dummy queue was created with 4 messages in it. 3 consumers (client) were run as a go routine, and they were synchronized by locks using redis. 
 
 ## Output
 
