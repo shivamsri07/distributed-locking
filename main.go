@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	redis "github.com/go-redis/redis/v9"
 )
@@ -21,8 +22,8 @@ const (
 	`
 
 	release_script = `
-		if redis.call('GET', KEYS[1]) == ARGV[1] then
-			return redis.call('DEL', KEYS[1])
+		if redis.call('get', KEYS[1]) == ARGV[1] then
+			return redis.call('del', KEYS[1])
 		else
 			return 0
 		end
@@ -33,13 +34,15 @@ const (
 )
 
 type Message struct {
-	id      int
-	message string
+	id        int
+	message   string
+	processed bool
 }
 
 type Queue struct {
 	events       []*Message
 	messageCount int
+	owner        string
 }
 
 var q *Queue
@@ -60,42 +63,47 @@ func InitQueue() {
 
 func AcquireLock(resource_name, client_id string, ttl int) int {
 
-	acquire_lock := redis.NewScript(acquire_script)
-	key := []string{resource_name}
 	for {
-		num, _ := acquire_lock.Run(ctx, client, key, client_id, ttl).Int()
-		if &num != nil {
-			fmt.Printf("Lock acquired by: %v\n", client_id)
-			return num
+		res := client.SetNX(ctx, resource_name, client_id, time.Duration(time.Duration.Seconds(10)))
+		if res.Val() == true {
+			fmt.Printf("Acquiring Lock :: %v\n", client_id)
+			return 1
 		} else {
 			continue
 		}
 	}
+
 }
 
-func ReleaseLock(resource_name, client_id string) int {
+func ReleaseLock(resource_name, client_id string) bool {
 	release_lock := redis.NewScript(release_script)
 	key := []string{resource_name}
-
-	num, err := release_lock.Run(ctx, client, key, client_id).Int()
+	fmt.Printf("Releasing Lock :: %v\n", client_id)
+	_, err := release_lock.Run(ctx, client, key, client_id).Int()
 	if err != nil {
 		fmt.Printf("Can not release lock: %v\n", err)
 	}
-	fmt.Printf("Lock released: %v\n", client_id)
-	return num
+	return true
 }
 
-func (q *Queue) ProcessMessage(client_id string) {
-	for q.messageCount > 0 {
+func (q *Queue) _ProcessMessage(client_id string) {
+	for {
+		if q.messageCount == 0 {
+			break
+		}
 		num := AcquireLock(resource_name, client_id, ttl)
 		if &num != nil && q.messageCount > 0 {
-			fmt.Printf("Queue message processed by: %s => id: %v, message: %v\n", client_id, q.events[q.messageCount-1].id, q.events[q.messageCount-1].message)
-			q.messageCount--
-		}
-	}
+			// fmt.Printf("Client : %v for message : %v\n", client_id, q.events[q.messageCount-1].id)
+			if q.messageCount > 0 && q.events[q.messageCount-1].processed != true {
+				q.events[q.messageCount-1].processed = true
+				fmt.Printf("Queue message processed by: %s => id: %v, message: %v\n",
+					client_id, q.events[q.messageCount-1].id, q.events[q.messageCount-1].message)
 
-	ReleaseLock(resource_name, client_id)
-	fmt.Printf("All message processed : %v\n", client_id)
+				q.messageCount--
+			}
+		}
+		ReleaseLock(resource_name, client_id)
+	}
 
 }
 
@@ -113,7 +121,7 @@ func main() {
 
 		go func() {
 			defer wg.Done()
-			q.ProcessMessage(fmt.Sprintf("client_%v", i%num_consumers))
+			q._ProcessMessage(fmt.Sprintf("client_%v", i%num_consumers))
 		}()
 	}
 
