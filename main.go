@@ -17,10 +17,6 @@ var client *redis.Client = redis.NewClient(&redis.Options{
 var ctx context.Context = context.Background()
 
 const (
-	acquire_script = `
-		return redis.call('SET', KEYS[1], ARGV[1], 'NX', 'PX', ARGV[2])
-	`
-
 	release_script = `
 		if redis.call('get', KEYS[1]) == ARGV[1] then
 			return redis.call('del', KEYS[1])
