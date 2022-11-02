@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	redis "github.com/go-redis/redis/v9"
 )
@@ -84,11 +85,11 @@ func ReleaseLock(resource_name, client_id string) int {
 	return num
 }
 
-func (q *Queue) ProcessMessage(client_id string, completed chan int) {
+func (q *Queue) ProcessMessage(client_id string) {
 	for q.messageCount > 0 {
 		num := AcquireLock(resource_name, client_id, ttl)
 		if &num != nil && q.messageCount > 0 {
-			fmt.Printf("Queue message by: %s => id: %v, message: %v\n", client_id, q.events[q.messageCount-1].id, q.events[q.messageCount-1].message)
+			fmt.Printf("Queue message processed by: %s => id: %v, message: %v\n", client_id, q.events[q.messageCount-1].id, q.events[q.messageCount-1].message)
 			q.messageCount--
 		}
 	}
@@ -96,21 +97,26 @@ func (q *Queue) ProcessMessage(client_id string, completed chan int) {
 	ReleaseLock(resource_name, client_id)
 	fmt.Printf("All message processed : %v\n", client_id)
 
-	completed <- q.messageCount
 }
 
 func main() {
-	InitQueue()
+	var wg sync.WaitGroup
 
-	completed := make(chan int)
+	InitQueue()
 
 	var i int
 
 	for i = 0; i < num_consumers; i++ {
-		go q.ProcessMessage(fmt.Sprintf("client_%v", i%num_consumers), completed)
+		wg.Add(1)
+
+		i := i
+
+		go func() {
+			defer wg.Done()
+			q.ProcessMessage(fmt.Sprintf("client_%v", i%num_consumers))
+		}()
 	}
 
-	if c := <-completed; c == 0 {
-		return
-	}
+	wg.Wait()
+
 }
