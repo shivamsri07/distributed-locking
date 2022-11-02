@@ -91,10 +91,10 @@ func (q *Queue) _ProcessMessage(client_id string) {
 		if &num != nil && q.messageCount > 0 {
 			// fmt.Printf("Client : %v for message : %v\n", client_id, q.events[q.messageCount-1].id)
 			if q.messageCount > 0 && q.events[q.messageCount-1].processed != true {
-				q.events[q.messageCount-1].processed = true
 				fmt.Printf("Queue message processed by: %s => id: %v, message: %v\n",
 					client_id, q.events[q.messageCount-1].id, q.events[q.messageCount-1].message)
 
+				q.events[q.messageCount-1].processed = true
 				q.messageCount--
 			}
 		}
