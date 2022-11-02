@@ -5,4 +5,5 @@ To test out, a dummy queue was created with 4 messages in it. 3 consumers (clien
 
 ## Output
 
-<img width="526" alt="Screenshot 2022-11-02 at 12 42 16 AM" src="https://user-images.githubusercontent.com/12581295/199319478-65314819-621d-4d37-ad59-745bb674fe30.png">
+<img width="467" alt="Screenshot 2022-11-02 at 12 14 02 PM" src="https://user-images.githubusercontent.com/12581295/199419092-8d669c3d-24cb-4757-8f42-800aff5d5cb7.png">
+
