@@ -7,4 +7,5 @@ To test out, a dummy queue was created with 4 messages in it. 3 consumers (clien
 
 <img width="499" alt="Screenshot 2022-11-02 at 6 27 05 PM" src="https://user-images.githubusercontent.com/12581295/199495861-7f24ee9b-a7cf-4b9a-ba45-f071c17dc6bf.png">
 
-
+I have written a blog on this, please check that out
+https://shvm.me/articles/distributed-locks
